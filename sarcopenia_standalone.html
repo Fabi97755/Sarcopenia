@@ -1,0 +1,403 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Sarcopenia</title></head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a single 16:9 stage (1920x1080 canvas) scaled to fit, with a slim control bar beneath. Deliberately single dark look, like a microscopy viewer. */
+:root {
+  --ink: #0b171d;        /* stage ground */
+  --ink-2: #13252d;
+  --paper: #f3ece6;      /* text */
+  --muted: #9fb2b6;
+  --muscle: #c8424f;     /* type II fibre */
+  --muscle-deep: #8e1f2f;/* type I fibre */
+  --fat: #f2c75c;
+  --conn: #e6c3b4;       /* connective tissue */
+  --f-display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { background: var(--ink); color: var(--paper); }
+body { font-family: var(--f-body); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px; }
+.wrap { max-width: 1280px; margin: 0 auto; display: grid; gap: 12px; }
+canvas { display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; height: auto; border-radius: 6px; background: var(--ink); }
+.bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.bar button { font: 500 14px var(--f-body); color: var(--paper); background: var(--ink-2); border: 1px solid #2a434d; border-radius: 4px; padding: 6px 14px; cursor: pointer; }
+.bar button:hover { border-color: var(--muted); }
+.bar button:focus-visible, .bar input:focus-visible { outline: 2px solid var(--fat); outline-offset: 2px; }
+.bar input[type=range] { flex: 1 1 200px; min-width: 0; accent-color: var(--muscle); }
+.bar output { font: 500 13px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; min-width: 6ch; }
+.note { font-size: 13px; color: var(--muted); max-width: 70ch; }
+body.record { padding: 0; }
+body.record .wrap { max-width: none; gap: 0; }
+body.record .bar, body.record .note { display: none; }
+body.record canvas { border-radius: 0; width: 1920px; }
+</style>
+
+<div class="wrap">
+  <canvas id="stage" width="1920" height="1080" aria-label="Animazione: tre fasci muscolari di bambino, adulto e anziano vengono sezionati; la sezione mostra fibre muscolari e grasso."></canvas>
+  <div class="bar">
+    <button id="play" type="button">Pausa</button>
+    <button id="restart" type="button">Ricomincia</button>
+    <input id="scrub" type="range" min="0" max="25" step="0.01" value="0" aria-label="Posizione nell'animazione">
+    <output id="clock">0.0 s</output>
+  </div>
+  <p class="note">Dati da letteratura (fonti nel video); le sezioni sono schematiche. Per PowerPoint usa la versione MP4 (Inserisci › Video).</p>
+</div>
+
+<script>
+(() => {
+const W = 1920, H = 1080, DUR = 25;
+const cv = document.getElementById('stage');
+const ctx = cv.getContext('2d');
+const css = getComputedStyle(document.documentElement);
+const C = {
+  ink: css.getPropertyValue('--ink').trim(), ink2: css.getPropertyValue('--ink-2').trim(),
+  paper: css.getPropertyValue('--paper').trim(), muted: css.getPropertyValue('--muted').trim(),
+  m2: css.getPropertyValue('--muscle').trim(), m1: css.getPropertyValue('--muscle-deep').trim(),
+  fat: css.getPropertyValue('--fat').trim(), conn: css.getPropertyValue('--conn').trim(),
+};
+const F = { d: css.getPropertyValue('--f-display').trim(), b: css.getPropertyValue('--f-body').trim(), m: css.getPropertyValue('--f-mono').trim() };
+
+// ---------- helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, k) => a + (b - a) * k;
+const eio = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const eo = k => 1 - Math.pow(1 - k, 3);
+const fadeWin = (t, a, b, f = .5) => Math.min(seg(t, a, a + f), 1 - seg(t, b - f, b));
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+// ---------- cross-section generation (unit disk) ----------
+function poisson(r, d, maxR, tries) {
+  const pts = [], cell = d, grid = new Map();
+  const key = (x, y) => Math.floor(x / cell) + ',' + Math.floor(y / cell);
+  for (let i = 0; i < tries; i++) {
+    const a = r() * Math.PI * 2, rr = Math.sqrt(r()) * maxR;
+    const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+    const gx = Math.floor(x / cell), gy = Math.floor(y / cell);
+    let ok = true;
+    for (let ix = -1; ix <= 1 && ok; ix++) for (let iy = -1; iy <= 1 && ok; iy++) {
+      const b = grid.get((gx + ix) + ',' + (gy + iy));
+      if (b) for (const p of b) if ((p.x - x) ** 2 + (p.y - y) ** 2 < d * d) { ok = false; break; }
+    }
+    if (!ok) continue;
+    const p = { x, y }; pts.push(p);
+    const k = key(x, y); (grid.get(k) || grid.set(k, []).get(k)).push(p);
+  }
+  return pts;
+}
+
+function makeSection(o) {
+  const r = rng(o.seed);
+  const pts = poisson(r, o.d, .955, 60000);
+  const fasc = poisson(r, .34, .78, 400);
+  const clusters = Array.from({ length: o.clusters }, () => { const a = r() * 6.283, rr = .25 + r() * .6; return { x: Math.cos(a) * rr, y: Math.sin(a) * rr, s: .12 + r() * .14 }; });
+  for (const p of pts) {
+    let d1 = 9, d2 = 9;
+    for (const f of fasc) { const dd = Math.hypot(p.x - f.x, p.y - f.y); if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) d2 = dd; }
+    p.septum = (d2 - d1) < o.d * .2;
+    let field = 0; for (const c of clusters) field = Math.max(field, Math.exp(-((p.x - c.x) ** 2 + (p.y - c.y) ** 2) / (c.s * c.s)));
+    p.score = field + r() * .35 + (p.septum ? .45 : 0) + Math.hypot(p.x, p.y) * .15;
+    p.type = r() < .5 ? 1 : 2;
+  }
+  // fat: top-scoring points
+  const sorted = [...pts].sort((a, b) => b.score - a.score);
+  const nFat = Math.round(o.fat * pts.length);
+  sorted.forEach((p, i) => { p.fat = i < nFat; });
+  // fibre loss (ageing): type II lost preferentially
+  for (const p of pts) if (!p.fat && !p.septum && r() < o.loss * (p.type === 2 ? 1.4 : .6)) p.lost = true;
+  // polygonal cells: clip a box around each point by the bisectors with its neighbours (Voronoi)
+  const R2 = (o.d * 2.6) ** 2;
+  for (const p of pts) {
+    const h = o.d * 1.3;
+    let poly = [[p.x - h, p.y - h], [p.x + h, p.y - h], [p.x + h, p.y + h], [p.x - h, p.y + h]];
+    const nb = pts.filter(q => q !== p && (q.x - p.x) ** 2 + (q.y - p.y) ** 2 < R2).map(q => [q.x, q.y]);
+    const rp = Math.hypot(p.x, p.y);
+    if (rp > .7) { const k = (2 * .955 - rp) / rp; nb.push([p.x * k, p.y * k]); }
+    for (const [qx, qy] of nb) {
+      const nx = qx - p.x, ny = qy - p.y, mx = (qx + p.x) / 2, my = (qy + p.y) / 2;
+      const side = v => (v[0] - mx) * nx + (v[1] - my) * ny;
+      const out = [];
+      for (let i = 0; i < poly.length; i++) {
+        const A = poly[i], B = poly[(i + 1) % poly.length], sa = side(A), sb = side(B);
+        if (sa <= 0) out.push(A);
+        if ((sa <= 0) !== (sb <= 0)) { const k = sa / (sa - sb); out.push([A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k]); }
+      }
+      poly = out; if (!poly.length) break;
+    }
+    let cx = 0, cy = 0; for (const v of poly) { cx += v[0]; cy += v[1]; }
+    p.cx = cx / poly.length; p.cy = cy / poly.length; p.poly = poly;
+  }
+  const shrinkPoly = (p, k) => p.poly.map(([x, y]) => [p.cx + (x - p.cx) * k, p.cy + (y - p.cy) * k]);
+  const fibres = pts.filter(p => !p.fat && !p.septum && !p.lost && p.poly.length);
+  for (const p of fibres) {
+    const shrink = p.type === 2 ? o.shrink2 : o.shrink1;
+    p.shape = shrinkPoly(p, .86 * shrink * (.94 + r() * .08));
+    p.rad = o.d * .4 * shrink;
+    p.nuc = r() < .7 ? Math.floor(r() * p.shape.length) : null;
+  }
+  const fat = pts.filter(p => p.fat && p.poly.length).map(p => ({ x: p.cx, y: p.cy, rad: o.d * .5, shape: shrinkPoly(p, .97) }));
+  return { o, fibres, fat };
+}
+
+function polyPath(g, pts) { g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); }
+
+function paintSection(sec, S = 760) {
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  g.translate(S / 2, S / 2); g.scale(S / 2, S / 2);
+  g.save(); g.beginPath(); g.arc(0, 0, 1, 0, 6.283); g.clip();
+  g.fillStyle = C.conn; g.fillRect(-1, -1, 2, 2);
+  g.lineJoin = 'round';
+  for (const f of sec.fat) {
+    polyPath(g, f.shape); g.fillStyle = C.fat; g.fill(); g.lineWidth = .005; g.strokeStyle = '#c9982f'; g.stroke();
+    g.beginPath(); g.arc(f.x - f.rad * .25, f.y - f.rad * .25, f.rad * .3, 0, 6.283); g.fillStyle = 'rgba(255,248,220,.4)'; g.fill();
+  }
+  for (const p of sec.fibres) {
+    polyPath(g, p.shape);
+    g.fillStyle = p.type === 1 ? C.m1 : C.m2; g.fill();
+    g.lineWidth = .006; g.strokeStyle = p.type === 1 ? C.m1 : C.m2; g.stroke();
+    g.lineWidth = .002; g.strokeStyle = 'rgba(60,8,20,.5)'; g.stroke();
+    if (p.nuc !== null) {
+      const [vx, vy] = p.shape[p.nuc], nx = p.cx + (vx - p.cx) * .78, ny = p.cy + (vy - p.cy) * .78;
+      g.beginPath(); g.ellipse(nx, ny, Math.max(.006, p.rad * .2), Math.max(.004, p.rad * .12), Math.atan2(vy - p.cy, vx - p.cx) + 1.57, 0, 6.283); g.fillStyle = '#3b1747'; g.fill();
+    }
+  }
+  // volume shading
+  const sh = g.createRadialGradient(-.35, -.4, .1, 0, 0, 1.05);
+  sh.addColorStop(0, 'rgba(255,255,255,.10)'); sh.addColorStop(.7, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(10,0,10,.35)');
+  g.fillStyle = sh; g.fillRect(-1, -1, 2, 2);
+  g.restore();
+  g.beginPath(); g.arc(0, 0, .985, 0, 6.283); g.lineWidth = .03; g.strokeStyle = '#f2dcd2'; g.stroke();
+  return c;
+}
+
+// ---------- the three ages ----------
+const AGES = [
+  // fat: % of muscle volume (MRI/MRS, thigh); fibres: number relative to the young adult
+  { name: 'Bambino', age: '~ 10 anni', cy: 330, r: 60, R: 180, fx: 400,  fat: 2, fatTxt: '≈ 2%', fib: 'Fibre più piccole, in crescita',
+    sec: { seed: 11, d: .088, clusters: 1, fat: .02, loss: 0, shrink1: .86, shrink2: .86 } },
+  { name: 'Adulto',  age: '~ 30 anni', cy: 560, r: 92, R: 235, fx: 960,  fat: 1.7, fatTxt: '≈ 2%', fib: 'Picco di massa muscolare',
+    sec: { seed: 23, d: .074, clusters: 1, fat: .02, loss: 0, shrink1: 1, shrink2: 1 } },
+  { name: 'Anziano', age: '~ 75–80 anni', cy: 790, r: 72, R: 200, fx: 1520, fat: 6, fatTxt: '≈ 6%', fib: '≈ 25% di fibre in meno',
+    sec: { seed: 37, d: .078, clusters: 3, fat: .065, loss: .22, shrink1: .92, shrink2: .62 } },
+];
+for (const a of AGES) { a.data = makeSection(a.sec); a.img = paintSection(a.data); }
+const X0 = 400, X1 = 1580, XC = 990, FY = 430, RX = .3;
+
+// ---------- drawing pieces ----------
+// fusiform muscle: tendon -> belly -> tendon; u runs 0..1 along the length
+const TEND = .2;
+function prof(u) { const v = clamp((u - .1) / .8); return TEND + (1 - TEND) * Math.pow(Math.sin(Math.PI * v), .85); }
+function musclePath(x0, x1, cy, r, ua, ub) {
+  const N = 60, X = u => x0 + (x1 - x0) * u;
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) { const u = lerp(ua, ub, i / N); i ? ctx.lineTo(X(u), cy - r * prof(u)) : ctx.moveTo(X(u), cy - r * prof(u)); }
+  const rb = r * prof(ub); ctx.ellipse(X(ub), cy, rb * RX, rb, 0, -Math.PI / 2, Math.PI / 2);
+  for (let i = N; i >= 0; i--) { const u = lerp(ua, ub, i / N); ctx.lineTo(X(u), cy + r * prof(u)); }
+  const ra = r * prof(ua); ctx.ellipse(X(ua), cy, ra * RX, ra, 0, Math.PI / 2, Math.PI * 1.5);
+  ctx.closePath();
+}
+function drawMuscle(x0, x1, cy, r, ua = 0, ub = 1) {
+  const X = u => x0 + (x1 - x0) * u;
+  musclePath(x0, x1, cy, r, ua, ub);
+  const hg = ctx.createLinearGradient(x0, 0, x1, 0);
+  hg.addColorStop(0, '#eadfd6'); hg.addColorStop(.09, '#d9c6bb'); hg.addColorStop(.17, '#b8394a');
+  hg.addColorStop(.5, '#c4404f'); hg.addColorStop(.83, '#b8394a'); hg.addColorStop(.91, '#d9c6bb'); hg.addColorStop(1, '#eadfd6');
+  ctx.fillStyle = hg; ctx.fill();
+  ctx.save(); musclePath(x0, x1, cy, r, ua, ub); ctx.clip();
+  const vg = ctx.createLinearGradient(0, cy - r, 0, cy + r);
+  vg.addColorStop(0, 'rgba(30,0,10,.55)'); vg.addColorStop(.2, 'rgba(255,235,235,.28)'); vg.addColorStop(.36, 'rgba(255,255,255,0)');
+  vg.addColorStop(.75, 'rgba(30,0,10,.25)'); vg.addColorStop(1, 'rgba(20,0,8,.7)');
+  ctx.fillStyle = vg; ctx.fillRect(x0 - r, cy - r, x1 - x0 + 2 * r, 2 * r);
+  // fibres running along the belly and converging into the tendons
+  const n = 18, N = 50;
+  for (let k = 0; k < n; k++) {
+    const sk = Math.sin(-Math.PI / 2 + (k + .5) / n * Math.PI);
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) { const u = lerp(ua, ub, i / N), y = cy + r * prof(u) * sk; i ? ctx.lineTo(X(u), y) : ctx.moveTo(X(u), y); }
+    ctx.lineWidth = 1.3; ctx.strokeStyle = `rgba(255,200,200,${.1 + .16 * Math.sqrt(1 - sk * sk)})`; ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawFace(a, cx, cy, rx, ry, alpha = 1) {
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(cx, cy); ctx.scale(rx, ry);
+  ctx.drawImage(a.img, -1, -1, 2, 2); ctx.restore();
+}
+function text(s, x, y, font, color, align = 'left', alpha = 1) {
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(s, x, y); ctx.restore();
+}
+function wrapLines(s, font, maxW) {
+  ctx.font = font; const words = s.split(' '), lines = []; let line = '';
+  for (const w of words) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }
+  lines.push(line); return lines;
+}
+
+const SOURCES = [
+  'Fonti: Lexell J et al., Muscle Nerve 1983;6:588–95 · Lexell J et al., J Neurol Sci 1988;84:275–94 · Grimm A et al., J Frailty Aging 2018, doi:10.14283/jfa.2018.16 · AJR Am J Roentgenol 2019, doi:10.2214/AJR.18.20354',
+  'Delmonico MJ et al., Am J Clin Nutr 2009;90:1579–85 · Mitchell WK et al., Front Physiol 2012;3:260 · Cruz-Jentoft AJ et al. (EWGSOP2), Age Ageing 2019;48:16–31 · Tessuto muscolare = 100% − tessuto adiposo (PDFF) · Sezioni schematiche',
+];
+const CAPTIONS = [
+  { a: 11.6, b: 15.6, s: "Nel bambino e nell'adulto le fibre muscolari sono numerose e compatte. Il muscolo è per circa il 98% tessuto muscolare e solo per il 2% tessuto adiposo." },
+  { a: 15.6, b: 19.8, s: "Nell'anziano le fibre sono circa il 25% in meno e quelle veloci (tipo II) si assottigliano. Il tessuto adiposo si infiltra: in 5 anni quello tra i muscoli della coscia cresce del 30–50%." },
+  { a: 19.8, b: 99,   s: "Sarcopenia: perdita progressiva di massa, forza e qualità del muscolo. Verso i 75 anni la massa cala dello 0,6–1% all'anno, la forza del 2,5–4%." },
+];
+
+// ---------- frame ----------
+function render(t) {
+  ctx.globalAlpha = 1;
+  const bg = ctx.createRadialGradient(W * .5, H * .42, 100, W * .5, H * .5, W * .75);
+  bg.addColorStop(0, '#16303a'); bg.addColorStop(1, C.ink);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // title card
+  const ta = fadeWin(t, .2, 3.0, .8);
+  if (ta > 0) {
+    const lift = eo(seg(t, .2, 1.2)) * 20;
+    text('SARCOPENIA', W / 2, 470 - lift + 20, `700 132px ${F.d}`, C.paper, 'center', ta);
+    text('Cosa cambia dentro il muscolo: bambino, adulto, anziano', W / 2, 560 - lift + 20, `400 40px ${F.b}`, C.muted, 'center', ta);
+  }
+  // header
+  const ha = seg(t, 3.0, 3.6);
+  if (ha > 0) {
+    text('SARCOPENIA', 80, 92, `700 34px ${F.d}`, C.paper, 'left', ha);
+    text('Sezione trasversale del muscolo', 80, 132, `400 26px ${F.b}`, C.muted, 'left', ha);
+  }
+
+  const cutK = seg(t, 4.9, 5.9), sepK = eio(seg(t, 5.9, 7.0)), turnK = eio(seg(t, 7.0, 9.2));
+  const focus = [1, 1, 1];
+  const hl1 = fadeWin(t, 11.8, 15.6, .5), hl2 = fadeWin(t, 15.8, 19.8, .5);
+  focus[2] = 1 - .55 * hl1; focus[0] = focus[1] = 1 - .55 * hl2;
+
+  AGES.forEach((a, i) => {
+    const enter = eo(seg(t, 2.8 + i * .22, 4.3 + i * .22));
+    if (enter <= 0) return;
+    const dx = (1 - enter) * -220;
+    const bodyA = enter * (1 - seg(t, 7.0, 8.2));
+    // label
+    const la = enter * (1 - seg(t, 6.8, 7.4));
+    if (la > 0) {
+      text(a.name, X0 - 70 + dx, a.cy + 4, `700 40px ${F.d}`, C.paper, 'right', la);
+      text(a.age, X0 - 70 + dx, a.cy + 42, `500 24px ${F.m}`, C.muted, 'right', la);
+    }
+    if (t < 5.9) {
+      ctx.save(); ctx.globalAlpha = enter; drawMuscle(X0 + dx, X1 + dx, a.cy, a.r); ctx.restore();
+    } else {
+      // right piece slides off
+      const ra = 1 - sepK;
+      if (ra > 0) { ctx.save(); ctx.globalAlpha = ra; drawMuscle(X0 + sepK * 300, X1 + sepK * 300, a.cy, a.r, .5, 1); ctx.restore(); }
+      if (bodyA > 0) { ctx.save(); ctx.globalAlpha = bodyA; drawMuscle(X0 - sepK * 40, X1 - sepK * 40, a.cy, a.r, 0, .5); ctx.restore(); }
+      // face: from cut ellipse to frontal circle
+      const fx0 = XC - sepK * 40;
+      const cx = lerp(fx0, a.fx, turnK), cy = lerp(a.cy, FY, turnK);
+      const rx = lerp(a.r * RX, a.R, turnK), ry = lerp(a.r, a.R, turnK);
+      if (turnK > 0) { // soft shadow
+        ctx.save(); ctx.globalAlpha = turnK * .5 * focus[i];
+        const sg = ctx.createRadialGradient(cx, cy + ry + 26, 4, cx, cy + ry + 26, rx * 1.1);
+        sg.addColorStop(0, 'rgba(0,0,0,.6)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(cx, cy + ry + 26, rx * 1.1, 26, 0, 0, 6.283); ctx.fill(); ctx.restore();
+      }
+      drawFace(a, cx, cy, rx, ry, focus[i]);
+      // fat highlight rings (elderly)
+      if (i === 2 && hl2 > 0) {
+        const pulse = .5 + .5 * Math.sin((t - 15.8) * 5);
+        ctx.save(); ctx.translate(cx, cy); ctx.scale(rx, ry);
+        ctx.lineWidth = .012; ctx.strokeStyle = `rgba(255,236,170,${hl2 * (.35 + .5 * pulse)})`;
+        for (const f of a.data.fat) { ctx.beginPath(); ctx.arc(f.x, f.y, f.rad * (1.25 + .25 * pulse), 0, 6.283); ctx.stroke(); }
+        ctx.restore();
+      }
+    }
+  });
+
+  // blade
+  if (cutK > 0 && t < 6.4) {
+    const y0 = 190, y1 = 900, yy = lerp(y0, y1, eio(cutK)), ba = 1 - seg(t, 5.9, 6.4);
+    ctx.save(); ctx.globalAlpha = ba;
+    const gl = ctx.createLinearGradient(XC - 18, 0, XC + 18, 0);
+    gl.addColorStop(0, 'rgba(255,240,200,0)'); gl.addColorStop(.5, 'rgba(255,240,200,.45)'); gl.addColorStop(1, 'rgba(255,240,200,0)');
+    ctx.fillStyle = gl; ctx.fillRect(XC - 18, y0, 36, yy - y0);
+    ctx.fillStyle = '#fff6e0'; ctx.fillRect(XC - 1.5, y0, 3, yy - y0);
+    ctx.beginPath(); ctx.moveTo(XC, yy + 26); ctx.lineTo(XC - 14, yy - 10); ctx.lineTo(XC + 14, yy - 10); ctx.closePath();
+    ctx.fillStyle = '#e8eef0'; ctx.fill();
+    ctx.restore();
+  }
+
+  // after turn: arrows, labels, bars, legend
+  const lab = seg(t, 9.0, 9.8);
+  if (lab > 0) {
+    ctx.save(); ctx.globalAlpha = lab;
+    // time axis
+    ctx.strokeStyle = 'rgba(159,178,182,.35)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 2; i++) {
+      const xa = AGES[i].fx + AGES[i].R + 28, xb = AGES[i + 1].fx - AGES[i + 1].R - 28;
+      ctx.beginPath(); ctx.moveTo(xa, FY); ctx.lineTo(xb, FY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xb, FY); ctx.lineTo(xb - 14, FY - 9); ctx.lineTo(xb - 14, FY + 9); ctx.closePath(); ctx.fillStyle = 'rgba(159,178,182,.6)'; ctx.fill();
+    }
+    ctx.restore();
+    AGES.forEach((a, i) => {
+      const al = lab * (.45 + .55 * focus[i]);
+      text(a.name, a.fx, 730, `700 42px ${F.d}`, C.paper, 'center', al);
+      text(a.age, a.fx, 768, `500 24px ${F.m}`, C.muted, 'center', al);
+      // bars
+      const bk = eo(seg(t, 9.6 + i * .25, 11.4 + i * .25)), bw = 340, bx = a.fx - bw / 2;
+      text(a.fib, a.fx, 806, `500 23px ${F.b}`, '#e98a95', 'center', al * seg(t, 9.6 + i * .25, 10.4 + i * .25));
+      // muscle = 100% − fat fraction (PDFF); fat bar on a 0–10% scale so small values stay visible
+      const rows = [['Tessuto muscolare', '', 100 - a.fat, 100, '≈ ' + Math.round(100 - a.fat) + '%', C.m2],
+                    ['Tessuto adiposo', 'scala 0–10%', a.fat, 10, a.fatTxt, C.fat]];
+      rows.forEach(([lbl, note, v, max, txt, col], j) => {
+        const y = 844 + j * 50;
+        text(lbl, bx, y, `500 22px ${F.b}`, C.paper, 'left', al);
+        if (note) { ctx.font = `500 22px ${F.b}`; text(note, bx + ctx.measureText(lbl).width + 10, y, `500 15px ${F.m}`, C.muted, 'left', al * .9); }
+        text(txt, bx + bw, y, `500 24px ${F.m}`, col, 'right', al * bk);
+        ctx.save(); ctx.globalAlpha = al;
+        ctx.fillStyle = 'rgba(159,178,182,.18)'; ctx.fillRect(bx, y + 10, bw, 9);
+        ctx.fillStyle = col; ctx.fillRect(bx, y + 10, bw * v / max * bk, 9);
+        ctx.restore();
+      });
+    });
+    // legend
+    const lg = [[C.m1, 'Fibre tipo I (lente)'], [C.m2, 'Fibre tipo II (veloci)'], [C.fat, 'Tessuto adiposo'], [C.conn, 'Connettivo']];
+    lg.forEach(([col, s], k) => {
+      const x = W - 80 - 300, y = 74 + k * 36;
+      ctx.save(); ctx.globalAlpha = lab; ctx.beginPath(); ctx.arc(x, y - 8, 10, 0, 6.283); ctx.fillStyle = col; ctx.fill(); ctx.restore();
+      text(s, x + 24, y, `400 23px ${F.b}`, C.paper, 'left', lab);
+    });
+  }
+
+  // captions
+  for (const c of CAPTIONS) {
+    const a = fadeWin(t, c.a, c.b, .45);
+    if (a <= 0) continue;
+    const final = c.b > 50;
+    const font = final ? `500 34px ${F.b}` : `400 32px ${F.b}`;
+    const lines = wrapLines(c.s, font, 1500);
+    const y0 = 976 - (lines.length - 1) * 20;
+    lines.forEach((ln, k) => text(ln, W / 2, y0 + k * 40, font, final ? C.paper : C.muted, 'center', a));
+  }
+  const src = seg(t, 9.6, 10.4);
+  SOURCES.forEach((ln, k) => text(ln, W / 2, 1040 + k * 24, `400 16px ${F.b}`, 'rgba(159,178,182,.75)', 'center', src));
+}
+
+// ---------- playback ----------
+let t = 0, playing = true, last = null;
+const scrub = document.getElementById('scrub'), clock = document.getElementById('clock'), playBtn = document.getElementById('play');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function show(tt) { t = clamp(tt, 0, DUR); render(t); scrub.value = t; clock.textContent = t.toFixed(1) + ' s'; }
+function loop(now) {
+  if (playing) { if (last !== null) t += (now - last) / 1000; if (t >= DUR) t = DUR, playing = false, playBtn.textContent = 'Riproduci'; show(t); }
+  last = now; requestAnimationFrame(loop);
+}
+playBtn.onclick = () => { if (t >= DUR) t = 0; playing = !playing; playBtn.textContent = playing ? 'Pausa' : 'Riproduci'; };
+document.getElementById('restart').onclick = () => { t = 0; playing = true; playBtn.textContent = 'Pausa'; };
+scrub.oninput = () => { playing = false; playBtn.textContent = 'Riproduci'; show(+scrub.value); };
+
+window.renderAt = s => render(s);
+window.DURATION = DUR;
+if (location.search.includes('record')) { document.body.classList.add('record'); render(0); }
+else if (reduce) { playing = false; playBtn.textContent = 'Riproduci'; show(DUR); requestAnimationFrame(loop); }
+else { document.fonts && document.fonts.ready.then(() => requestAnimationFrame(loop)); show(0); }
+})();
+</script>
+</body></html>
