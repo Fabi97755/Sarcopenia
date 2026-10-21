@@ -1,6 +1,6 @@
 # Sarcopenia: animazione "Dentro il muscolo"
 
-Animazione didattica (25 s, 16:9, 1920×1080) per una presentazione PowerPoint sulla sarcopenia.
+Animazione didattica (31 s, 16:9, 1920×1080) per una presentazione PowerPoint sulla sarcopenia.
 Tre muscoli fusiformi (bambino, adulto, anziano) vengono tagliati a metà del ventre; le sezioni
 ruotano verso lo spettatore e mostrano fibre muscolari (tipo I e tipo II), connettivo e tessuto
 adiposo, con barre di tessuto muscolare / tessuto adiposo e didascalie con fonti.
@@ -22,7 +22,7 @@ Requisiti per il rendering: Node.js, `playwright` con Chromium, `ffmpeg`.
 
 - Canvas 2D a risoluzione fissa 1920×1080. Tutto è disegnato via codice; nessuna immagine esterna.
 - **Rendering deterministico**: `render(t)` disegna il fotogramma al tempo `t` (secondi). È esposto come
-  `window.renderAt(t)`; `window.DURATION = 25`. Con `?record` nell'URL i controlli sono nascosti.
+  `window.renderAt(t)`; `window.DURATION = 31`. Con `?record` nell'URL i controlli sono nascosti.
 - **Colori e font**: token CSS in `:root` (`--muscle`, `--muscle-deep`, `--fat`, `--conn`, ...), letti dal JS
   nell'oggetto `C`. Font Google: Familjen Grotesk (titoli), IBM Plex Sans (testo), IBM Plex Mono (numeri).
 - **Sezioni istologiche** (`makeSection`, `paintSection`): punti Poisson-disk nel disco unitario →
@@ -47,11 +47,11 @@ Requisiti per il rendering: Node.js, `playwright` con Chromium, `ffmpeg`.
 | 2.8–4.7 | Entrata dei tre muscoli con etichette |
 | 4.9–5.9 | Lama che taglia |
 | 5.9–7.0 | Metà destre si allontanano; appaiono le facce di taglio |
-| 7.0–9.2 | Le facce ruotano e diventano tre cerchi (bambino → adulto → anziano) |
-| 9.0–11.6 | Etichette, barre tessuto muscolare/adiposo, legenda, fonti |
-| 11.6–15.6 | Didascalia 1 (bambino/adulto), anziano attenuato |
-| 15.6–19.8 | Didascalia 2 (anziano), tessuto adiposo evidenziato con anelli pulsanti |
-| 19.8–25 | Didascalia finale |
+| 7.0–10.2 | Le facce ruotano e diventano tre cerchi (bambino → adulto → anziano) |
+| 10.0–12.6 | Etichette, barre tessuto muscolare/adiposo, legenda, fonti |
+| 12.6–18.6 | Didascalia 1 (bambino/adulto), anziano attenuato (dissolvenza di 1,2 s) |
+| 18.6–25.0 | Didascalia 2 (anziano), tessuto adiposo evidenziato con anelli pulsanti |
+| 25.0–31 | Didascalia finale |
 
 ## Dati e fonti
 
