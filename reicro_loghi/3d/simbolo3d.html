@@ -1,0 +1,126 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Simbolo REICRO 3D</title>
+<style>html,body{margin:0;background:transparent}canvas{display:block}</style>
+<script src="vendor/three.min.js"></script></head><body>
+<script>
+// Versione 3D delle proposte 7, 8 e 9 (Orbite). Uso: simbolo3d.html?v=7|8|9
+// Le coordinate sono le stesse del 2D (gen_v3.py): angoli in gradi, in senso orario sullo schermo.
+const V = new URLSearchParams(location.search).get('v') || '7';
+const SIZE = 1200;
+const DEEP = 0x0E4F5C, TEAL = 0x1C9C8C, CORAL = 0xE8664A, LINK = 0x7FA5AB;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setSize(SIZE, SIZE);
+renderer.setClearColor(0x000000, 0);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.VSMShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(26, 1, 10, 2000);
+camera.position.set(0, -70, 500);
+camera.lookAt(0, -4, 0);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9fbfc2, 1.6));
+const key = new THREE.DirectionalLight(0xffffff, 2.6);
+key.position.set(-120, 140, 420);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -160, right: 160, top: 160, bottom: -160, near: 10, far: 900 });
+key.shadow.radius = 14;
+key.shadow.blurSamples = 24;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xbff3ea, 1.2);
+rim.position.set(220, -60, -120);
+scene.add(rim);
+
+const mat = (color, o = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: .32, metalness: 0, clearcoat: .7, clearcoatRoughness: .25, ...o });
+const M = { deep: mat(DEEP), teal: mat(TEAL), coral: mat(CORAL, { roughness: .28 }), link: mat(LINK, { roughness: .5, clearcoat: .2 }) };
+
+const logo = new THREE.Group();
+logo.rotation.x = -0.32;   // piano inclinato all'indietro
+logo.rotation.y = 0.16;
+scene.add(logo);
+
+// piano invisibile dietro il simbolo che riceve solo l'ombra
+const catcher = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.ShadowMaterial({ opacity: .12 }));
+catcher.position.z = -18;
+catcher.receiveShadow = true;
+logo.add(catcher);
+
+const rad = d => d * Math.PI / 180;
+const P = (r, a, z = 0) => new THREE.Vector3(r * Math.cos(rad(a)), -r * Math.sin(rad(a)), z);
+function add(mesh) { mesh.castShadow = true; mesh.receiveShadow = true; logo.add(mesh); return mesh; }
+function sphere(p, r, m) { const s = add(new THREE.Mesh(new THREE.SphereGeometry(r, 48, 32), m)); s.position.copy(p); return s; }
+function rod(p, q, r, m) {
+  const d = new THREE.Vector3().subVectors(q, p), len = d.length();
+  const c = add(new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 16), m));
+  c.position.copy(p).addScaledVector(d, .5);
+  c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+}
+// arco di toro da a0 ad a1 (gradi, orari sullo schermo)
+function arc(r, a0, a1, tube, m, z = 0) {
+  const t = add(new THREE.Mesh(new THREE.TorusGeometry(r, tube, 24, 160, rad(a1 - a0)), m));
+  t.rotation.z = -rad(a1); t.position.z = z;
+  for (const a of [a0, a1]) sphere(P(r, a, z), tube, m);   // estremità arrotondate
+  return t;
+}
+function ringSegments(r, angles, gap, tube, m, z) {
+  angles.forEach((a, i) => {
+    const b = angles[(i + 1) % angles.length] + (i === angles.length - 1 ? 360 : 0);
+    arc(r, a + gap, b - gap, tube, m, z);
+  });
+}
+
+const O = new THREE.Vector3(0, 0, 14);
+function persona() { sphere(O, 16, M.coral); }
+
+function rete() {
+  const RI = 36, RO = 74, ZI = 8, ZO = 0;
+  const inner = [-90, 30, 150], outer = [-60, 0, 60, 120, 180, 240];
+  const IN = inner.map(a => P(RI, a, ZI)), OUT = outer.map(a => P(RO, a, ZO));
+  IN.forEach(p => rod(O, p, 1.6, M.link));
+  inner.forEach((a, i) => outer.forEach((b, j) => {
+    if (Math.abs(((b - a + 540) % 360) - 180) === 30) rod(IN[i], OUT[j], 1.6, M.link);
+  }));
+  ringSegments(RI, inner, 22, 3.2, M.teal, ZI);
+  ringSegments(RO, outer, 13, 3.8, M.deep, ZO);
+  IN.forEach(p => sphere(p, 8, M.teal));
+  OUT.forEach((p, i) => sphere(p, 10, i === 1 ? M.coral : M.deep));
+  persona();
+}
+
+function ciclo() {
+  const RC = 96, a0 = -80, a1 = 215;
+  arc(RC, a0, a1, 2.8, M.teal, -4);
+  // punta della freccia: cono tangente all'orbita
+  const tip = P(RC, a1 + 2, -4), back = P(RC, a1 - 6, -4);
+  const cone = add(new THREE.Mesh(new THREE.ConeGeometry(8, 16, 32), M.teal));
+  const d = new THREE.Vector3().subVectors(tip, back).normalize();
+  cone.position.copy(tip);
+  cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d);
+}
+
+function spirale() {
+  // la spirale sale verso chi guarda man mano che si allontana dal centro: il tempo che passa
+  const th1 = 2.25 * 360, r0 = 20, r1 = 96, z0 = 22, z1 = -6;
+  const sp = t => P(r0 + (r1 - r0) * t / th1, t - 90, z0 + (z1 - z0) * t / th1);
+  const pts = []; for (let t = 0; t <= th1; t += 3) pts.push(sp(t));
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const tube = add(new THREE.Mesh(new THREE.TubeGeometry(curve, 600, 3.2, 20), M.deep));
+  sphere(pts[0], 3.2, M.deep); sphere(pts[pts.length - 1], 3.2, M.deep);
+  [0, 120, 240].forEach((a, k) => {
+    const ts = [0, 1, 2].map(j => a + 360 * j).filter(t => t <= th1);
+    rod(O, sp(ts[ts.length - 1]), 1.6, M.link);
+    ts.forEach((t, j) => {
+      const last = j === ts.length - 1;
+      sphere(sp(t), 7 + 2 * j, last && k === 0 ? M.coral : j === 0 ? M.teal : M.deep);
+    });
+  });
+  persona();
+}
+
+if (V === '9') spirale(); else { rete(); if (V === '8') ciclo(); }
+
+renderer.render(scene, camera);
+document.title = 'ready';
+</script></body></html>
