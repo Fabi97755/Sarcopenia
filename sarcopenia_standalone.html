@@ -242,6 +242,13 @@ function render(t) {
   bg.addColorStop(0, '#16303a'); bg.addColorStop(1, C.ink);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
+  // header
+  const ha = seg(t, .3, .9);
+  if (ha > 0) {
+    text('SARCOPENIA', 80, 92, `700 34px ${F.d}`, C.paper, 'left', ha);
+    text('Sezione trasversale del muscolo', 80, 132, `400 26px ${F.b}`, C.muted, 'left', ha);
+  }
+
   const cutK = seg(t, 2.4, 3.9), sepK = eio(seg(t, 3.9, 5.5)), turnK = eio(seg(t, 5.5, 9.5));
   const focus = [1, 1, 1];
   const hl1 = fadeWin(t, 12.0, 23.0, 2.0), hl2 = fadeWin(t, 23.2, 34.0, 2.0);

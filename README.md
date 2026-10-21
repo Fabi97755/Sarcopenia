@@ -3,8 +3,8 @@
 Animazione didattica (40 s, 16:9, 1920×1080) per una presentazione PowerPoint sulla sarcopenia.
 Tre muscoli fusiformi (bambino, adulto, anziano) vengono tagliati a metà del ventre; le sezioni
 ruotano verso lo spettatore e mostrano fibre muscolari (tipo I e tipo II), connettivo e tessuto
-adiposo, con barre di tessuto muscolare / tessuto adiposo e fonti. Senza titolo né didascalie:
-il testo lo dice chi presenta.
+adiposo, con barre di tessuto muscolare / tessuto adiposo e fonti. Senza schermata del titolo né
+didascalie (il testo lo dice chi presenta); resta l'intestazione in alto a sinistra.
 
 ## File
 
@@ -44,7 +44,7 @@ Requisiti per il rendering: Node.js, `playwright` con Chromium, `ffmpeg`.
 
 | t | Evento |
 |---|---|
-| 0.3–2.2 | Entrata dei tre muscoli con etichette |
+| 0.3–2.2 | Intestazione in alto; entrata dei tre muscoli con etichette |
 | 2.4–3.9 | Lama che taglia |
 | 3.9–5.5 | Metà destre si allontanano; appaiono le facce di taglio |
 | 5.5–9.5 | Le facce ruotano e diventano tre cerchi (bambino → adulto → anziano) |
