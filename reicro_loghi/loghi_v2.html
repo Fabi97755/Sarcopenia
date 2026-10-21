@@ -1,0 +1,52 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Loghi REICRO v2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;500;600;800&display=swap">
+<style>
+:root{--deep:#0E4F5C;--teal:#1C9C8C;--coral:#E8664A;--ink:#12303A;--muted:#5D7A80}
+body{margin:0;background:#fff;font-family:Manrope,sans-serif}
+.logo{display:inline-block;padding:40px;background:transparent}
+.b{font-weight:800}.l{font-weight:300}
+.word{font-family:Manrope;font-size:92px;letter-spacing:2px;fill:var(--ink)}
+.sub{font:600 19px Manrope;letter-spacing:3.4px;fill:var(--muted)}
+</style></head><body>
+
+<!-- 4. INTRECCIO: due anelli concatenati (territorio e ospedale), la persona nel punto d'incontro -->
+<div class="logo" id="logo4"><svg width="780" height="220" viewBox="0 0 780 220">
+ <g transform="translate(112,110)" fill="none" stroke-width="18">
+  <circle cx="-32" cy="0" r="62" stroke="#1C9C8C"/>
+  <circle cx="32" cy="0" r="62" stroke="#0E4F5C"/>
+  <!-- tratto del primo anello che passa sopra: l'intreccio -->
+  <path d="M-15.95,-59.9 A62,62 0 0 1 11.9,-44.0" stroke="#1C9C8C" transform="rotate(0)"/>
+  <circle cx="0" cy="0" r="15" fill="#E8664A" stroke="none"/>
+ </g>
+ <text class="word" x="252" y="118"><tspan class="b">REI</tspan><tspan class="l">CRO</tspan></text>
+ <text class="sub" x="256" y="160">RETE INTEGRATA CRONICITÀ</text>
+</svg></div>
+
+<!-- 5. PERCORSO: una "R" tracciata con un'unica linea continua, dal territorio all'ospedale -->
+<div class="logo" id="logo5"><svg width="780" height="220" viewBox="0 0 780 220">
+ <defs><linearGradient id="g5" x1="0" y1="1" x2="1" y2="0">
+  <stop offset="0" stop-color="#1C9C8C"/><stop offset="1" stop-color="#0E4F5C"/></linearGradient></defs>
+ <g transform="translate(108,110)">
+  <path d="M-42,62 V-56 Q-42,-72 -26,-72 H8 A41,41 0 0 1 8,10 H-8 L44,70" fill="none"
+        stroke="url(#g5)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="-42" cy="74" r="15" fill="#E8664A"/>
+ </g>
+ <text class="word" x="232" y="118" fill="#0E4F5C"><tspan class="b" fill="#0E4F5C">RE</tspan><tspan class="b" fill="#E8664A">I</tspan><tspan class="b" fill="#0E4F5C">CRO</tspan></text>
+ <text class="sub" x="236" y="160">DAL TERRITORIO ALL'OSPEDALE</text>
+</svg></div>
+
+<!-- 6. ORBITE: la persona al centro, i livelli di cura che le ruotano intorno a distanze diverse -->
+<div class="logo" id="logo6"><svg width="780" height="220" viewBox="0 0 780 220">
+ <g transform="translate(112,110)" fill="none" stroke-linecap="round">
+  <path d="M-37.59,-13.68 A40,40 0 1 1 -25.71,30.64" stroke="#1C9C8C" stroke-width="9"/>
+  <circle cx="-25.71" cy="30.64" r="9" fill="#1C9C8C" stroke="none"/>
+  <path d="M11.46,65.0 A66,66 0 1 1 65.0,11.46" stroke="#0E4F5C" stroke-width="9"/>
+  <circle cx="65.0" cy="11.46" r="10" fill="#0E4F5C" stroke="none"/>
+  <path d="M83.38,-38.88 A92,92 0 1 1 -8.02,-91.65" stroke="#0E4F5C" stroke-width="5" opacity=".45"/>
+  <circle cx="-8.02" cy="-91.65" r="9" fill="#E8664A" stroke="none"/>
+  <circle cx="0" cy="0" r="17" fill="#E8664A" stroke="none"/>
+ </g>
+ <text class="word" x="252" y="118"><tspan class="b">REICRO</tspan></text>
+ <text class="sub" x="256" y="160">PRESA IN CURA DI PROSSIMITÀ</text>
+</svg></div>
+</body></html>
