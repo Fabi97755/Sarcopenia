@@ -1,9 +1,10 @@
 # Sarcopenia: animazione "Dentro il muscolo"
 
-Animazione didattica (48 s, 16:9, 1920×1080) per una presentazione PowerPoint sulla sarcopenia.
+Animazione didattica (40 s, 16:9, 1920×1080) per una presentazione PowerPoint sulla sarcopenia.
 Tre muscoli fusiformi (bambino, adulto, anziano) vengono tagliati a metà del ventre; le sezioni
 ruotano verso lo spettatore e mostrano fibre muscolari (tipo I e tipo II), connettivo e tessuto
-adiposo, con barre di tessuto muscolare / tessuto adiposo e didascalie con fonti.
+adiposo, con barre di tessuto muscolare / tessuto adiposo e fonti. Senza titolo né didascalie:
+il testo lo dice chi presenta.
 
 ## File
 
@@ -22,7 +23,7 @@ Requisiti per il rendering: Node.js, `playwright` con Chromium, `ffmpeg`.
 
 - Canvas 2D a risoluzione fissa 1920×1080. Tutto è disegnato via codice; nessuna immagine esterna.
 - **Rendering deterministico**: `render(t)` disegna il fotogramma al tempo `t` (secondi). È esposto come
-  `window.renderAt(t)`; `window.DURATION = 48`. Con `?record` nell'URL i controlli sono nascosti.
+  `window.renderAt(t)`; `window.DURATION = 40`. Con `?record` nell'URL i controlli sono nascosti.
 - **Colori e font**: token CSS in `:root` (`--muscle`, `--muscle-deep`, `--fat`, `--conn`, ...), letti dal JS
   nell'oggetto `C`. Font Google: Familjen Grotesk (titoli), IBM Plex Sans (testo), IBM Plex Mono (numeri).
 - **Sezioni istologiche** (`makeSection`, `paintSection`): punti Poisson-disk nel disco unitario →
@@ -36,22 +37,21 @@ Requisiti per il rendering: Node.js, `playwright` con Chromium, `ffmpeg`.
   parametro `u` 0..1 lungo la lunghezza; si può disegnare un tratto `[ua, ub]` (il taglio è a `u = 0.5`).
 - **Dati mostrati**: `AGES[]` → `fat` (% tessuto adiposo), `fatTxt`, `fib` (riga descrittiva fibre).
   Tessuto muscolare = 100 − fat. Barra adiposo in scala 0–10%.
-- **Testi**: `CAPTIONS` (didascalie con finestre temporali), `SOURCES` (due righe di fonti in basso),
+- **Testi**: `SOURCES` (due righe di fonti in basso),
   legenda nel blocco `// legend`.
 
 ## Timeline (secondi)
 
 | t | Evento |
 |---|---|
-| 0–3 | Titolo "SARCOPENIA" |
-| 2.8–4.7 | Entrata dei tre muscoli con etichette |
-| 4.9–6.4 | Lama che taglia |
-| 6.4–8.0 | Metà destre si allontanano; appaiono le facce di taglio |
-| 8.0–12.0 | Le facce ruotano e diventano tre cerchi (bambino → adulto → anziano) |
-| 11.8–14.4 | Etichette, barre tessuto muscolare/adiposo, legenda, fonti |
-| 14.4–26.4 | Didascalia 1 (bambino/adulto), anziano attenuato (dissolvenza di 2 s) |
-| 26.4–38.4 | Didascalia 2 (anziano), tessuto adiposo evidenziato con anelli pulsanti |
-| 38.4–48 | Didascalia finale |
+| 0.3–2.2 | Entrata dei tre muscoli con etichette |
+| 2.4–3.9 | Lama che taglia |
+| 3.9–5.5 | Metà destre si allontanano; appaiono le facce di taglio |
+| 5.5–9.5 | Le facce ruotano e diventano tre cerchi (bambino → adulto → anziano) |
+| 9.3–12.0 | Etichette, barre tessuto muscolare/adiposo, legenda, fonti |
+| 12.0–23.0 | Fase bambino/adulto: anziano attenuato (dissolvenza di 2 s) |
+| 23.2–34.0 | Fase anziano: bambino e adulto attenuati, tessuto adiposo evidenziato con anelli pulsanti |
+| 34.0–40 | Tutte e tre le sezioni in piena luce |
 
 ## Dati e fonti
 
