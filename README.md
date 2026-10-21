@@ -71,7 +71,7 @@ Le sezioni sono schematiche e non in scala. I riferimenti sono stati verificati 
 
 ## Uso in PowerPoint
 
-Usa `sarcopenia_powerpoint.mp4` (H.264 profilo Main, livello 4.0, senza audio, ~4,3 MB): è il formato
+Usa `sarcopenia_powerpoint.mp4` (H.264 profilo Main, livello 4.0, senza audio, circa 5 MB): è il formato
 più compatibile con PowerPoint per Windows, Mac e web.
 
 1. **Inserisci › Video › Questo dispositivo** (Mac: *Inserisci › Video › Filmato da file*) e scegli
