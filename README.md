@@ -16,7 +16,7 @@ didascalie (il testo lo dice chi presenta); resta l'intestazione in alto a sinis
 | `build.sh` | Rigenera la standalone, l'MP4, la versione per PowerPoint e l'anteprima. |
 | `sarcopenia.mp4` | Ultimo video renderizzato (master, alta qualità). |
 | `sarcopenia_powerpoint.mp4` | Versione compressa e compatibile per PowerPoint. |
-| `sarcopenia_anteprima.png` | Immagine di anteprima (fotogramma del titolo, 1920×1080). |
+| `sarcopenia_anteprima.png` | Immagine di anteprima (ultimo fotogramma con le tre sezioni, 1920×1080). |
 
 Requisiti per il rendering: Node.js, `playwright` con Chromium, `ffmpeg`.
 `./build.sh` impiega circa 1,5 minuti.
