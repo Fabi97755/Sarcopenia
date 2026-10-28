@@ -2,11 +2,13 @@
 <style>html,body{margin:0;background:transparent}canvas{display:block}</style>
 <script src="vendor/three.min.js"></script></head><body>
 <script>
-// Versione 3D delle proposte 7, 8 e 9 (Orbite). Uso: simbolo3d.html?v=7|8|9
+// Versione 3D delle proposte 7, 8 e 9 (Orbite). Uso: simbolo3d.html?v=7|8|9[&tema=scuro]
+// tema=scuro: materiali chiari e niente ombra, per sfondi scuri.
 // Le coordinate sono le stesse del 2D (gen_v3.py): angoli in gradi, in senso orario sullo schermo.
-const V = new URLSearchParams(location.search).get('v') || '7';
+const Q = new URLSearchParams(location.search);
+const V = Q.get('v') || '7', SCURO = Q.get('tema') === 'scuro';
 const SIZE = 1200;
-const DEEP = 0x0E4F5C, TEAL = 0x1C9C8C, CORAL = 0xE8664A, LINK = 0x7FA5AB;
+const DEEP = SCURO ? 0xEEF6F5 : 0x0E4F5C, TEAL = SCURO ? 0x3FC1AE : 0x1C9C8C, CORAL = 0xE8664A, LINK = SCURO ? 0x9CC9C3 : 0x7FA5AB;
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
 renderer.setSize(SIZE, SIZE);
@@ -45,7 +47,7 @@ scene.add(logo);
 const catcher = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.ShadowMaterial({ opacity: .12 }));
 catcher.position.z = -18;
 catcher.receiveShadow = true;
-logo.add(catcher);
+if (!SCURO) logo.add(catcher);
 
 const rad = d => d * Math.PI / 180;
 const P = (r, a, z = 0) => new THREE.Vector3(r * Math.cos(rad(a)), -r * Math.sin(rad(a)), z);

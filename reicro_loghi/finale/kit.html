@@ -1,0 +1,57 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Kit logo REICRO</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&display=swap">
+<style>
+/* Tavola del kit e composizioni 3D (simbolo renderizzato + scritta). Le versioni piatte sono gli SVG generati da genera_svg.py */
+:root{--deep:#0E4F5C;--ink:#12303A;--muted:#5D7A80}
+body{margin:0;background:#fff;font-family:Manrope,sans-serif;color:var(--ink);width:1500px}
+h1{font-weight:800;font-size:30px;margin:48px 56px 4px}
+h2{font-weight:600;font-size:15px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin:40px 56px 14px}
+.row{display:flex;gap:24px;margin:0 56px;align-items:stretch}
+.tile{flex:1;display:flex;align-items:center;justify-content:center;padding:36px;border-radius:14px;background:#F4F8F8;min-height:220px}
+.tile.dark{background:var(--deep)}
+.tile.photo{background:linear-gradient(135deg,#2C6E78,#0B3640 60%,#6B4A3F)}
+.tile img{max-width:100%}
+.cap{font-size:13px;color:var(--muted);margin:8px 56px 0;display:flex;gap:24px}.cap span{flex:1}
+/* composizioni 3D da esportare */
+.l3{display:inline-flex;align-items:center;gap:10px;padding:16px 40px 16px 12px}
+.l3 img{height:250px}
+.l3.v{flex-direction:column;gap:6px;padding:24px 40px 32px;text-align:center}
+.l3.v img{height:280px}
+.word{font-weight:800;font-size:96px;letter-spacing:2px;line-height:1;color:var(--ink)}
+.sub{font-weight:600;font-size:20px;letter-spacing:3.6px;color:var(--muted);margin-top:16px;padding-left:3px}
+.scuro .word{color:#fff}.scuro .sub{color:#BFD9DC}
+</style></head><body>
+<h1>REICRO · kit del logo</h1>
+
+<h2>Versione 3D</h2>
+<div class="row">
+ <div class="tile"><div class="l3" id="h3d"><img src="reicro_simbolo_3d.png"><div><div class="word">REICRO</div><div class="sub">RETE INTEGRATA CRONICITÀ</div></div></div></div>
+</div>
+<div class="row" style="margin-top:24px">
+ <div class="tile dark"><div class="l3 scuro" id="h3d_scuro"><img src="reicro_simbolo_3d_scuro.png"><div><div class="word">REICRO</div><div class="sub">RETE INTEGRATA CRONICITÀ</div></div></div></div>
+</div>
+<div class="row" style="margin-top:24px">
+ <div class="tile"><div class="l3 v" id="v3d"><img src="reicro_simbolo_3d.png"><div><div class="word">REICRO</div><div class="sub">RETE INTEGRATA CRONICITÀ</div></div></div></div>
+ <div class="tile dark"><div class="l3 v scuro" id="v3d_scuro"><img src="reicro_simbolo_3d_scuro.png"><div><div class="word">REICRO</div><div class="sub">RETE INTEGRATA CRONICITÀ</div></div></div></div>
+</div>
+
+<h2>Versione piatta (vettoriale)</h2>
+<div class="row">
+ <div class="tile"><img src="reicro_orizzontale_colori.svg" width="560"></div>
+ <div class="tile dark"><img src="reicro_orizzontale_negativo.svg" width="560"></div>
+</div>
+<div class="cap"><span>Colori · sfondi chiari</span><span>Negativo · sfondi scuri</span></div>
+<div class="row" style="margin-top:24px">
+ <div class="tile"><img src="reicro_verticale_colori.svg" width="300"></div>
+ <div class="tile dark"><img src="reicro_verticale_negativo.svg" width="300"></div>
+ <div class="tile photo"><img src="reicro_verticale_bianco.svg" width="300"></div>
+</div>
+<div class="cap"><span>Verticale · copertina</span><span>Verticale negativo</span><span>Bianco · su foto o colore pieno</span></div>
+<div class="row" style="margin-top:24px">
+ <div class="tile"><img src="reicro_simbolo_colori.svg" width="150"></div>
+ <div class="tile dark"><img src="reicro_simbolo_negativo.svg" width="150"></div>
+ <div class="tile"><img src="reicro_simbolo_colori.svg" width="48"> &nbsp; <img src="reicro_simbolo_colori.svg" width="32"> &nbsp; <img src="reicro_simbolo_colori.svg" width="20"></div>
+</div>
+<div class="cap"><span>Simbolo</span><span>Simbolo negativo</span><span>Prova di leggibilità in piccolo (48, 32, 20 px)</span></div>
+<div style="height:56px"></div>
+</body></html>
