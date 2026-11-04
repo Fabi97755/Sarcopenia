@@ -13,8 +13,10 @@ didascalie (il testo lo dice chi presenta); resta l'intestazione in alto a sinis
 | `sarcopenia.html` | **Sorgente principale.** Pagina senza doctype (formato Artifact di claude.ai). Modifica questo. |
 | `sarcopenia_standalone.html` | Stessa pagina con doctype, da aprire nel browser. Rigenerata da `build.sh`. |
 | `record.js` | Registra l'animazione in MP4 (Playwright + ffmpeg), fotogramma per fotogramma. |
-| `build.sh` | Rigenera la standalone e l'MP4. |
-| `sarcopenia.mp4` | Ultimo video renderizzato. |
+| `build.sh` | Rigenera la standalone, l'MP4, la versione per PowerPoint e l'anteprima. |
+| `sarcopenia.mp4` | Ultimo video renderizzato (master, alta qualità). |
+| `sarcopenia_powerpoint.mp4` | Versione compressa e compatibile per PowerPoint. |
+| `sarcopenia_anteprima.png` | Immagine di anteprima (ultimo fotogramma con le tre sezioni, 1920×1080). |
 
 Requisiti per il rendering: Node.js, `playwright` con Chromium, `ffmpeg`.
 `./build.sh` impiega circa 1,5 minuti.
@@ -69,4 +71,16 @@ Le sezioni sono schematiche e non in scala. I riferimenti sono stati verificati 
 
 ## Uso in PowerPoint
 
-Inserisci › Video › Questo dispositivo › `sarcopenia.mp4`; in Riproduzione: "Avvia automaticamente".
+Usa `sarcopenia_powerpoint.mp4` (H.264 profilo Main, livello 4.0, senza audio, circa 6 MB): è il formato
+più compatibile con PowerPoint per Windows, Mac e web.
+
+1. **Inserisci › Video › Questo dispositivo** (Mac: *Inserisci › Video › Filmato da file*) e scegli
+   `sarcopenia_powerpoint.mp4`. Il video viene incorporato nel file .pptx, quindi funziona anche su un altro computer.
+2. Ridimensiona il video a tutta diapositiva (è 16:9 come le diapositive standard).
+3. **Anteprima**: seleziona il video › scheda *Formato video* › **Fotogramma poster › Immagine da file…**
+   e scegli `sarcopenia_anteprima.png`. È l'immagine mostrata finché il video non parte (e nelle stampe/PDF).
+4. Scheda **Riproduzione**: *Avvia* › **Automaticamente** (o *Al clic*). Lascia disattivato *Ripeti fino all'interruzione*
+   se vuoi che si fermi sull'ultimo fotogramma.
+5. Prova con **Presentazione › Dall'inizio** (F5).
+
+Se PowerPoint segnala problemi di compatibilità: *File › Informazioni › Ottimizza compatibilità contenuti multimediali*.
