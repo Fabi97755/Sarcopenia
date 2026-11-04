@@ -1,0 +1,147 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Oltre il peso</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{--ink:#0b171d;--ink-2:#13252d;--paper:#f3ece6;--muted:#9fb2b6;--muscle:#c8424f;--fat:#f2c75c;--well:#6cc3a8;--line:#2a434d;}
+html,body{margin:0;background:var(--ink)}canvas{display:block;width:100%;max-width:1920px;aspect-ratio:16/9}
+</style></head><body>
+<canvas id="stage" width="1920" height="1080" aria-label="Animazione: due persone con lo stesso peso hanno composizione corporea diversa; il benessere comprende molte dimensioni oltre al peso."></canvas>
+<script>
+(()=>{
+const W=1920,H=1080,DUR=23;
+['700 40px "Familjen Grotesk"','500 40px "Familjen Grotesk"','400 40px "IBM Plex Sans"','500 40px "IBM Plex Sans"','500 40px "IBM Plex Mono"'].forEach(f=>document.fonts.load(f));
+const cv=document.getElementById('stage'),ctx=cv.getContext('2d');
+const cs=getComputedStyle(document.documentElement),v=n=>cs.getPropertyValue(n).trim();
+const C={ink:v('--ink'),ink2:v('--ink-2'),paper:v('--paper'),muted:v('--muted'),mus:v('--muscle'),fat:v('--fat'),well:v('--well'),line:v('--line')};
+const FD='"Familjen Grotesk",Arial,sans-serif',FB='"IBM Plex Sans",Arial,sans-serif',FM='"IBM Plex Mono",monospace';
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x)),seg=(t,a,b)=>clamp((t-a)/(b-a)),lerp=(a,b,k)=>a+(b-a)*k;
+const eio=k=>k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2,eo=k=>1-Math.pow(1-k,3);
+const fade=(t,a,b,c,d)=>Math.min(eo(seg(t,a,b)),d===undefined?1:1-eio(seg(t,c,d)));
+
+function text(s,x,y,{font,size,color=C.paper,align='left',alpha=1,base='alphabetic'}){
+  if(alpha<=0)return;ctx.save();ctx.globalAlpha*=alpha;ctx.font=`${font.w||500} ${size}px ${font.f}`;ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline=base;ctx.fillText(s,x,y);ctx.restore();}
+const D={f:FD,w:700},Dm={f:FD,w:500},B={f:FB,w:400},Bm={f:FB,w:500},M={f:FM,w:500};
+
+function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
+
+// bilancia digitale
+function scale(cx,cy,s,kg,alpha){
+  if(alpha<=0)return;ctx.save();ctx.globalAlpha*=alpha;ctx.translate(cx,cy);ctx.scale(s,s);
+  rr(-230,-150,460,300,60);ctx.fillStyle=C.ink2;ctx.fill();ctx.lineWidth=4;ctx.strokeStyle=C.line;ctx.stroke();
+  rr(-150,-100,300,120,18);ctx.fillStyle='#071014';ctx.fill();
+  text(kg.toFixed(1).replace('.',','),60,-18,{font:M,size:84,color:C.paper,align:'right'});
+  text('kg',80,-18,{font:Bm,size:36,color:C.muted});
+  ctx.fillStyle=C.line;[-120,120].forEach(x=>{rr(x-50,70,100,30,15);ctx.fill();});
+  ctx.restore();}
+
+// sagoma umana (unione di forme) — w = larghezza relativa
+function figPath(cx,base,h,w){
+  const u=h/100;ctx.beginPath();
+  ctx.arc(cx,base-91*u,8.5*u,0,Math.PI*2);
+  ctx.roundRect(cx-13*w*u,base-80*u,26*w*u,38*u,[9*u,9*u,6*u,6*u]);
+  ctx.roundRect(cx-11.5*w*u,base-46*u,10.5*w*u,46*u,4.5*u);
+  ctx.roundRect(cx+1*w*u,base-46*u,10.5*w*u,46*u,4.5*u);
+  ctx.roundRect(cx-20*w*u,base-78*u,6.5*w*u,38*u,3.5*u);
+  ctx.roundRect(cx+13.5*w*u,base-78*u,6.5*w*u,38*u,3.5*u);}
+
+const hash=x=>{const v=Math.sin(x*127.1)*43758.5453;return v-Math.floor(v);};
+function figure(cx,base,h,w,comp,fillK,alpha,kgK){
+  if(alpha<=0)return;ctx.save();ctx.globalAlpha*=alpha;
+  figPath(cx,base,h,w);ctx.fillStyle=C.ink2;ctx.fill('nonzero');
+  ctx.save();figPath(cx,base,h,w);ctx.clip('nonzero');
+  const st=13,x0=cx-140,y0=base-h;let idx=0;
+  for(let y=y0;y<base;y+=st)for(let x=x0;x<cx+140;x+=st){idx++;
+    const r1=hash(idx*1.37+comp.seed),r2=hash(idx*7.91+comp.seed*3);
+    if(r2>fillK*1.15-.15*(1-(base-y)/h))continue;
+    ctx.fillStyle=r1<comp.mus/100?C.mus:r1<(comp.mus+comp.fat)/100?C.fat:'#1f333a';
+    ctx.beginPath();ctx.roundRect(x+1.5,y+1.5,st-3,st-3,3);ctx.fill();}
+  ctx.restore();
+  // pedana della bilancia
+  rr(cx-150,base+14,300,46,16);ctx.fillStyle=C.ink2;ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=C.line;ctx.stroke();
+  rr(cx-62,base+22,124,30,8);ctx.fillStyle='#071014';ctx.fill();
+  text((72*kgK).toFixed(1).replace('.',',')+' kg',cx,base+44,{font:M,size:22,align:'center'});
+  ctx.restore();}
+
+function bar(x,y,w,label,pct,col,k,alpha){
+  if(alpha<=0)return;ctx.save();ctx.globalAlpha*=alpha;
+  text(label,x,y,{font:B,size:28,color:C.muted});
+  text(Math.round(pct*k)+' %',x+w,y,{font:M,size:30,color:C.paper,align:'right'});
+  rr(x,y+14,w,14,7);ctx.fillStyle='#1d3139';ctx.fill();
+  rr(x,y+14,Math.max(14,w*pct/60*k),14,7);ctx.fillStyle=col;ctx.fill();ctx.restore();}
+
+const AX=['Massa muscolare','Forza','Mobilità','Alimentazione','Sonno','Energia','Umore','Relazioni'];
+const VAL=[.82,.78,.86,.74,.8,.84,.88,.8];
+
+function radar(t,cx,cy,R,alpha){
+  if(alpha<=0)return;ctx.save();ctx.globalAlpha*=alpha;
+  const g=eio(seg(t,12.4,13.6)),n=AX.length,ang=i=>-Math.PI/2+i*2*Math.PI/n;
+  ctx.lineWidth=2;
+  for(let r=1;r<=4;r++){ctx.beginPath();for(let i=0;i<=n;i++){const a=ang(i%n),rr_=R*r/4*g;i?ctx.lineTo(cx+Math.cos(a)*rr_,cy+Math.sin(a)*rr_):ctx.moveTo(cx+Math.cos(a)*rr_,cy+Math.sin(a)*rr_);}ctx.strokeStyle=C.line;ctx.stroke();}
+  for(let i=0;i<n;i++){const a=ang(i),k=eo(seg(t,12.9+i*.22,13.5+i*.22));
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*R*g,cy+Math.sin(a)*R*g);ctx.strokeStyle=C.line;ctx.stroke();
+    const lx=cx+Math.cos(a)*(R+34),ly=cy+Math.sin(a)*(R+34),al=Math.abs(Math.cos(a))<.2?'center':Math.cos(a)>0?'left':'right';
+    const dy=Math.sin(a)>.9?24:Math.sin(a)<-.9?-6:10;
+    text(AX[i],lx,ly+dy,{font:Bm,size:32,color:i<2?C.mus:C.paper,align:al,alpha:k});}
+  // poligono benessere
+  const p=eio(seg(t,14.6,16.4)),wob=Math.sin(t*1.6)*.015;
+  if(p>0){ctx.beginPath();for(let i=0;i<=n;i++){const a=ang(i%n),r=R*VAL[i%n]*p*(1+wob*Math.sin(i*2.1));i?ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r):ctx.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);}
+    ctx.closePath();ctx.fillStyle='rgba(108,195,168,.28)';ctx.fill();ctx.lineWidth=5;ctx.strokeStyle=C.well;ctx.stroke();
+    for(let i=0;i<n;i++){const a=ang(i),r=R*VAL[i]*p*(1+wob*Math.sin(i*2.1));ctx.beginPath();ctx.arc(cx+Math.cos(a)*r,cy+Math.sin(a)*r,9,0,7);ctx.fillStyle=C.well;ctx.fill();}}
+  // il peso: un piccolo dato al centro
+  const kk=eo(seg(t,13.2,14.2));
+  if(kk>0){ctx.save();ctx.globalAlpha*=kk;rr(cx-78,cy-30,156,60,30);ctx.fillStyle=C.ink2;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle=C.muted;ctx.stroke();
+    text('72 kg',cx,cy+12,{font:M,size:32,color:C.muted,align:'center'});ctx.restore();}
+  ctx.restore();}
+
+function render(t){
+  ctx.fillStyle=C.ink;ctx.fillRect(0,0,W,H);
+  const gl=ctx.createRadialGradient(W/2,H*.55,50,W/2,H*.55,1100);gl.addColorStop(0,'rgba(108,195,168,.06)');gl.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=gl;ctx.fillRect(0,0,W,H);
+  // intestazione
+  const hd=fade(t,.2,1);
+  text('OLTRE IL PESO',80,92,{font:Dm,size:30,color:C.muted,alpha:hd});
+  ctx.fillStyle=C.well;ctx.globalAlpha=hd;ctx.fillRect(80,108,90*eo(seg(t,.3,1.3)),4);ctx.globalAlpha=1;
+
+  // SCENA 1 — la bilancia
+  const s1=fade(t,0,.8,4.0,4.8);
+  const kg=72*eio(seg(t,.6,2.6))+(t<2.6&&t>.6?Math.sin(t*40)*.4*(1-seg(t,.6,2.6)):0);
+  scale(W/2,H*.5,1.25,Math.max(0,kg),s1);
+  text('Il peso è solo un numero.',W/2,H*.5+290,{font:D,size:64,align:'center',alpha:fade(t,2.8,3.6,4.0,4.6)});
+
+  // SCENA 2 — stesso peso, corpi diversi
+  const s2=fade(t,4.4,5.4,11.2,12.0);
+  const A={cx:W*.25,comp:{mus:42,fat:20,oth:38,seed:1},w:1.0,title:'Persona A'};
+  const Bp={cx:W*.7,comp:{mus:27,fat:38,oth:35,seed:2},w:1.22,title:'Persona B'};
+  const fk=eio(seg(t,6.0,8.0)),bk=eo(seg(t,7.4,9.0));
+  [A,Bp].forEach((P,i)=>{
+    const enter=eo(seg(t,4.6+i*.25,5.8+i*.25));
+    ctx.save();ctx.translate(0,(1-enter)*40);
+    figure(P.cx-60,740,500,P.w,P.comp,fk,s2*enter,eio(seg(t,5.0,6.2)));
+    text(P.title,P.cx+150,300,{font:D,size:40,alpha:s2*enter});
+    bar(P.cx+150,380,330,'Muscolo',P.comp.mus,C.mus,bk,s2*bk);
+    bar(P.cx+150,470,330,'Grasso',P.comp.fat,C.fat,bk,s2*bk);
+    ctx.restore();});
+  text('Stesso peso. Stessa altezza.',W/2,890,{font:D,size:58,align:'center',alpha:fade(t,6.3,7.2,11.0,11.8)});
+  text('Composizione corporea e salute molto diverse.',W/2,960,{font:Bm,size:40,color:C.muted,align:'center',alpha:fade(t,8.6,9.6,11.0,11.8)});
+  text('esempio illustrativo',W-80,H-50,{font:B,size:22,color:C.muted,align:'right',alpha:.8*fade(t,7.4,8.4,11.0,11.8)});
+  // marca sul corpo B: meno muscolo
+  const mk=fade(t,9.4,10.2,11.0,11.8);
+  if(mk>0){ctx.save();ctx.globalAlpha=mk*(.6+.4*Math.sin(t*5));ctx.lineWidth=4;ctx.strokeStyle=C.fat;ctx.setLineDash([10,10]);
+    rr(Bp.cx+150-14,355,358,145,16);ctx.stroke();ctx.restore();}
+
+  // SCENA 3 — il benessere complessivo
+  const s3=fade(t,12.0,12.6);
+  const shift=eio(seg(t,18.0,19.4));
+  radar(t,W/2-shift*360,H*.53,300-shift*40,s3*(1-.55*shift));
+  text('Il benessere è fatto di molte dimensioni.',W/2,H-70,{font:D,size:50,align:'center',alpha:fade(t,15.6,16.4,17.6,18.2)});
+
+  // CHIUSURA
+  const e1=eo(seg(t,18.8,19.8)),e2=eo(seg(t,19.8,20.8));
+  text('Non guardare',W/2+150,H*.45,{font:D,size:76,alpha:e1});
+  text('solo il peso.',W/2+150,H*.45+88,{font:D,size:76,alpha:e1});
+  text('Guarda al benessere',W/2+150,H*.45+200,{font:D,size:76,color:C.well,alpha:e2});
+  text('complessivo.',W/2+150,H*.45+288,{font:D,size:76,color:C.well,alpha:e2});
+}
+window.renderAt=render;window.DURATION=DUR;
+if(!location.search.includes('record')){const t0=performance.now();const loop=n=>{render(((n-t0)/1000)%DUR);requestAnimationFrame(loop)};document.fonts.ready.then(()=>requestAnimationFrame(loop));}
+else render(0);
+})();
+</script></body></html>
